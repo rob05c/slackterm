@@ -1,0 +1,37 @@
+
+This is a graph of the manager goroutines and channels, and what calls them
+
+ |------------------|-<-PutChannelInfo-----<-
+ | channelIdManager |
+ |                  |-<-ChannelIdRequest---<-
+ |                  |
+ |------------------|-<-ChannelNameRequest-<-
+
+ |------------------|-<-UserNameRequest----<-
+ | UserManager      |                        
+ |                  |                        
+ |                  |                        
+ |------------------|                        
+
+ |------------------|-<-MessageRequest-----<-
+ | MessageManager   |
+ |                  |-<-SlackRtmMessage----<-
+ |                  |                        
+ |------------------|->-UserNameRequest---->-
+                                                                                          
+ |------------------|-<-UpdateMsgs---------<-
+ | GuiUpdater       |                        
+ |                  |->-GetUserName-------->-
+ |                  |                        
+ |                  |->-GetChannelName----->-
+ |                  |                        
+ |------------------|->-GetMessages-------->-
+                     
+ |------------------|-<-UpdateMsgs---------<-
+ | Gui Events       |                        
+ |                  |->-GetUserName-------->-
+ |                  |                        
+ |                  |->-GetChannelName----->-
+ |                  |                        
+ |------------------|->-GetMessages-------->-
+                     

@@ -27,10 +27,11 @@ func EnterTheGui(slackToken string,
 	defer g.Close()
 
 	g.SetLayout(layout)
+	layout(g) // draw once, to create views
 
-	if err := g.Flush(); err != nil {
-		log.Panicln(err)
-	}
+	// if err := g.Flush(); err != nil {
+	// 	log.Panicln(err)
+	// }
 
 	if err := g.SetCurrentView("channels"); err != nil {
 		log.Panicln(err)
@@ -44,7 +45,7 @@ func EnterTheGui(slackToken string,
 
 	go guiUpdater(g, updateMsgsChan, getUserNameChan, getChannelNameChan, getMessagesChan, slackToken)
 
-	if err := g.MainLoop(); err != nil && err != gocui.Quit {
+	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
 }
@@ -59,8 +60,9 @@ func layout(g *gocui.Gui) error {
 
 	// the -1 everywhere is subtracting borders
 
+	log.Println("DEBUG setting view")
 	if v, err := g.SetView("channels", 0, 0, channelsWidth-1, maxY-inputHeight); err != nil {
-		if err != gocui.ErrorUnkView {
+		if err != gocui.ErrUnknownView {
 			return err
 		}
 		v.SelFgColor = gocui.AttrReverse
@@ -72,7 +74,7 @@ func layout(g *gocui.Gui) error {
 
 	//	messagesWidth := maxX - channelsWidth
 	if v, err := g.SetView("messages-names", channelsWidth, 0, channelsWidth+messageNamesWidth, maxY-inputHeight); err != nil {
-		if err != gocui.ErrorUnkView {
+		if err != gocui.ErrUnknownView {
 			return err
 		}
 		v.FgColor = gocui.ColorRed | gocui.AttrBold
@@ -82,14 +84,14 @@ func layout(g *gocui.Gui) error {
 	}
 
 	if v, err := g.SetView("messages", channelsWidth+messageNamesWidth, 0, maxX-1, maxY-inputHeight); err != nil {
-		if err != gocui.ErrorUnkView {
+		if err != gocui.ErrUnknownView {
 			return err
 		}
 		v.Frame = false
 	}
 
 	if v, err := g.SetView("input", 0, maxY-inputHeight-1, maxX-1, maxY); err != nil {
-		if err != gocui.ErrorUnkView {
+		if err != gocui.ErrUnknownView {
 			return err
 		}
 		v.Editable = true
@@ -103,7 +105,7 @@ func layout(g *gocui.Gui) error {
 }
 
 func quit(g *gocui.Gui, v *gocui.View) error {
-	return gocui.Quit
+	return gocui.ErrQuit
 }
 
 func populateChannels(g *gocui.Gui, token string, putChannelIdChan chan<- PutChannelInfo) error {
@@ -200,12 +202,12 @@ func populateMessages(g *gocui.Gui,
 	v.Clear()
 	vn.Clear()
 	fmt.Fprintln(v, "Loading Messages...")
-	g.Flush()
+	//	g.Flush()
 
 	msgs := GetMessages(channelId, getMessagesChan)
 
 	_, vHeight := v.Size()
-	lastMsgsI := int(math.Min(float64(vHeight - 1), float64(len(msgs)-1)))
+	lastMsgsI := int(math.Min(float64(vHeight-1), float64(len(msgs)-1)))
 	msgs = msgs[:lastMsgsI]
 	v.Clear()
 	vn.Clear()
@@ -228,38 +230,42 @@ func populateMessages(g *gocui.Gui,
 		return name
 	}
 
+	redify := func(s string) string {
+		return fmt.Sprintf("\033[31;0m%s\033[0m", s)
+	}
+
 	vnWidth, _ := vn.Size()
 
 	for i := len(msgs) - 1; i >= 0; i-- {
 		// For now, strip newlines, to work with the dumb logic printing the number of messages as the screen height
 		msg := msgs[i]
 		msgtxt := strings.Replace(strings.TrimRight(msg.Text, " \n\t"), "\n", "", -1) // TODO(print newlines [which requires accounting for them when getting the number of lines to print])
-		fmt.Fprintln(vn, padName(msg.UserName, vnWidth))
+		fmt.Fprintln(vn, redify(padName(msg.UserName, vnWidth)))
 		fmt.Fprintln(v, msgtxt)
 		//		g.Flush()
 	}
 
 	// // debug
 	// //	fmt.Fprintln(v, channelId)
-	g.Flush()
+	//	g.Flush()
 	log.Println("populateMessages returning")
 	return nil
 }
 
 func nextView(g *gocui.Gui, v *gocui.View) error {
-	g.ShowCursor = false
+	g.Cursor = false
 	v.Highlight = false
 	log.Println("nextView: " + v.Name())
 	var err error
 	switch v.Name() {
 	case "channels":
 		err = g.SetCurrentView("input")
-		g.ShowCursor = true
+		g.Cursor = true
 	case "input":
 		err = g.SetCurrentView("channels")
 		g.CurrentView().Highlight = true
 	}
-	g.Flush()
+	//	g.Flush()
 	return err
 }
 

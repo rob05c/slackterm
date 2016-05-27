@@ -207,7 +207,7 @@ func populateMessages(g *gocui.Gui,
 	msgs := GetMessages(channelId, getMessagesChan)
 
 	_, vHeight := v.Size()
-	lastMsgsI := int(math.Min(float64(vHeight-1), float64(len(msgs)-1)))
+	lastMsgsI := int(math.Max(math.Min(float64(vHeight-1), float64(len(msgs)-1)), 0))
 	msgs = msgs[:lastMsgsI]
 	v.Clear()
 	vn.Clear()

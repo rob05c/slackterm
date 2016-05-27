@@ -1,17 +1,18 @@
 package main
 
 import (
-	//	"fmt"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 )
 
 const tokenFile = `slack_token`
 
 func getToken() (string, error) {
-	f, err := ioutil.ReadFile(tokenFile)
-	return string(f), err
+	tokenBytes, err := ioutil.ReadFile(tokenFile)
+	return strings.TrimSpace(string(tokenBytes)), err
 }
 
 func main() {
@@ -25,7 +26,9 @@ func main() {
 
 	slackToken, err := getToken()
 	if err != nil {
-		log.Panicln(err)
+		fmt.Printf("Failed to get Slack token: %v.\nTo run, create a slack token at https://api.slack.com/web#authentication and put it in a file named 'slack_token' in your path.\n", err)
+		log.Printf("error getting Slack token: %v\n", err)
+		return
 	}
 
 	putChannelIdChan, getChannelIdChan, getChannelNameChan := StartChannelIdManager(slackToken)

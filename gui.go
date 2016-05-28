@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/jroimartin/gocui"
+	"hash/fnv"
+	"io"
 	"log"
 	"math"
 	"strings"
@@ -223,15 +225,19 @@ func populateMessages(g *gocui.Gui,
 			return name
 		}
 
-		name += " "
 		for len(name) < width {
-			name += "-"
+			name = " " + name
 		}
 		return name
 	}
 
-	redify := func(s string) string {
-		return fmt.Sprintf("\033[31;0m%s\033[0m", s)
+	// consistentHashColorName colors each name with a consistent, unique color
+	consistentHashColorName := func(name string) string {
+		h := fnv.New32a()
+		io.WriteString(h, name)
+		hNum := (h.Sum32() % 7) + 1
+		return fmt.Sprintf("\033[1;3%dm%s\033[0m", hNum, name)
+		return name
 	}
 
 	vnWidth, _ := vn.Size()
@@ -240,7 +246,7 @@ func populateMessages(g *gocui.Gui,
 		// For now, strip newlines, to work with the dumb logic printing the number of messages as the screen height
 		msg := msgs[i]
 		msgtxt := strings.Replace(strings.TrimRight(msg.Text, " \n\t"), "\n", "", -1) // TODO(print newlines [which requires accounting for them when getting the number of lines to print])
-		fmt.Fprintln(vn, redify(padName(msg.UserName, vnWidth)))
+		fmt.Fprintln(vn, consistentHashColorName(padName(msg.UserName, vnWidth)))
 		fmt.Fprintln(v, msgtxt)
 		//		g.Flush()
 	}
